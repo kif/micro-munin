@@ -4,7 +4,7 @@ import esp32
 from _secret import pin, name
 import socket
 import select
-import utime
+import time
 
 
 class Node:
@@ -62,7 +62,7 @@ class Node:
         self.clients = []
 
     def _read(self):
-        now = utime.ticks_ms()
+        now = time.ticks_ms()
         if (now - self.last_read) > 2000:
             self.dht.measure()
             self.last_read = now
@@ -97,7 +97,7 @@ class Node:
         self.server_socket.listen(5)
 
         while True:
-            requested_conn, wlist, xlist = select.select([self.server_socket], [], [], 0.05)
+            requested_conn, wlist, xlist = select.select([self.server_socket], [], [], 0.1)
             # print(requested_conn, wlist, xlist)
             for connexion in requested_conn:
                 client, remote_addr = connexion.accept()
@@ -108,7 +108,7 @@ class Node:
                     client.send(b"# munin node at %s \n" % self.name)
 
             try:
-                to_read, wlist, xlist = select.select(self.clients, [], [], 0.05)
+                to_read, wlist, xlist = select.select(self.clients, [], [], 0.1)
             except select.error:
                 to_read = []
 #             else:
@@ -116,7 +116,7 @@ class Node:
             for client in to_read:
                 try:
                     line = client.recv(2048).strip()
-                    print("<<<", line)
+#                     print("<<<", line)
                     if line in (b'.', b"quit"):
                         self.clients.remove(client)
                         client.close()
