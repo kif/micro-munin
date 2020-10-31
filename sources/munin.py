@@ -47,7 +47,7 @@ class Node:
                             b'graph_info This graph shows the average running speed of each CPU.\n'
                             b'cpu0.cdef cpu0,1000,*\n'
                             b'cpu0.label CPU 0\n'
-                            b'cpu0.max 330000\n'
+                            b'cpu0.max 300000000\n'
                             b'cpu0.min 30000\n'
                             b'.\n'
               }
@@ -82,7 +82,7 @@ class Node:
         elif what == b"meteo_humidity":
             return b'dht22.value %.2f\n.\n' % self._read().humidity()
         elif what == b'cpuspeed':
-            return b'esp32.value %d\n.\n' % machine.freq()
+            return b'cpu0.value %d\n.\n' % machine.freq()
         elif what == b'magnetic':
             return b'esp32.value %d\n.\n' % esp32.hall_sensor()
         else:
