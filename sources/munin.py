@@ -27,8 +27,8 @@ class Node:
                                     b'graph_category sensors\n'
                                     b'graph_info This graph shows the magnetic field on the ESP32\n'
                                     b'esp32.info Magnetic\n'
-                                    b'esp32.min 0\n'
-                                    b'esp32.max 255\n'
+                                    b'esp32.min -1024\n'
+                                    b'esp32.max 1024\n'
                                     b'esp32.label Magnetic field\n'
                                     b'.\n',
               b"meteo_humidity":   b'graph_title DHT22 humidity sensor\n'
@@ -49,6 +49,7 @@ class Node:
                             b'cpu0.label CPU 0\n'
                             b'cpu0.max 300000000\n'
                             b'cpu0.min 30000\n'
+                            b'cpu0.type DERIVE\n'
                             b'.\n'
               }
 
