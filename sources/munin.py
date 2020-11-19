@@ -22,7 +22,7 @@ class Node:
                                     b'esp32.max 70\n'
                                     b'esp32.label Temperature of the chip\n'
                                     b'.\n',
-              b"magnetic":  b"graph_title Hall effect sensor\n"
+              b"magnetic": b"graph_title Hall effect sensor\n"
                                     b'graph_vlabel Magnetic field\n'
                                     b'graph_category sensors\n'
                                     b'graph_info This graph shows the magnetic field on the ESP32\n'
@@ -31,7 +31,7 @@ class Node:
                                     b'esp32.max 1024\n'
                                     b'esp32.label Magnetic field\n'
                                     b'.\n',
-              b"meteo_humidity":   b'graph_title DHT22 humidity sensor\n'
+              b"meteo_humidity": b'graph_title DHT22 humidity sensor\n'
                                    b'graph_vlabel % Relative humidity\n'
                                    b'graph_category sensors\n'
                                    b'graph_info This graph shows the relative humidity sensor of the DHT22\n'
@@ -40,7 +40,7 @@ class Node:
                                    b'dht22.max 100\n'
                                    b'dht22.label Humidity inside\n'
                                    b'.\n',
-              b"cpuspeed":  b'graph_title CPU frequency scaling\n'
+              b"cpuspeed": b'graph_title CPU frequency scaling\n'
                             b'graph_args --base 1000\n'
                             b'graph_category system\n'
                             b'graph_vlabel Hz\n'
@@ -64,7 +64,8 @@ class Node:
 
     def _read(self):
         now = time.ticks_ms()
-        if (now - self.last_read) > 2000:
+        # TODO: check the dtype of time.ticks_ms()
+        if abs(time.ticks_diff(now, self.last_read)) > 2048:
             self.dht.measure()
             self.last_read = now
         return self.dht
