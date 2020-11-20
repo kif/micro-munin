@@ -1,10 +1,13 @@
 import dht
 import machine
 import esp32
-from _secret import pin, name
+import network
+from _secret import pin, name, essid
 import socket
 import select
 import time
+b_essid = essid.encode()
+station = network.WLAN(network.STA_IF)
 
 
 class Node:
@@ -48,9 +51,18 @@ class Node:
                             b'cpu0.cdef cpu0,1000,*\n'
                             b'cpu0.label CPU 0\n'
                             b'cpu0.max 300000000\n'
-                            b'cpu0.min 30000\n'
+                            b'cpu0.min 80000000\n'
                             b'cpu0.type DERIVE\n'
-                            b'.\n'
+                            b'.\n',
+              b"wifi": b"graph_title Strength of the wifi signal\n"
+                       b'graph_vlabel Wifi signal\n'
+                       b'graph_category network\n'
+                       b'graph_info This graph shows the strength of the WiFi signal\n'
+                       b'esp32.info Wifi\n'
+                       b'esp32.min -1024\n'
+                       b'esp32.max 1024\n'
+                       b'esp32.label Magnetic field\n'
+                       b'.\n',
               }
 
     def __init__(self, port=4949, name=name, pin=pin):
@@ -87,6 +99,12 @@ class Node:
             return b'cpu0.value %d\n.\n' % machine.freq()
         elif what == b'magnetic':
             return b'esp32.value %d\n.\n' % esp32.hall_sensor()
+        elif what == b'wifi':
+            lst = [ i[3] for i in station.scan() if i[0] == b_essid]
+            if lst:
+                return b'wifi.value %d\n.\n' % lst[0]
+            else:
+                return b'wifi.value 0\n.\n'
         else:
             return self.error
 
@@ -151,6 +169,7 @@ class Node:
                     print("Unable to communicate with client", client, err.__class__, err)
                     client.close()
                     self.clients.remove(client)
+            machine.idle()
 
     def flush(self):
         # close connections:
