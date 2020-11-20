@@ -58,10 +58,10 @@ class Node:
                        b'graph_vlabel Wifi signal\n'
                        b'graph_category network\n'
                        b'graph_info This graph shows the strength of the WiFi signal\n'
-                       b'esp32.info Wifi\n'
-                       b'esp32.min -1024\n'
-                       b'esp32.max 1024\n'
-                       b'esp32.label Magnetic field\n'
+                       b'wifi.info Wifi\n'
+                       b'wifi.min -1024\n'
+                       b'wifi.max 1024\n'
+                       b'wifi.label Signal strength\n'
                        b'.\n',
               }
 
