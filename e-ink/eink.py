@@ -1,6 +1,7 @@
 import epaper2in13
 from machine import Pin, SPI
-
+# import framebuf
+import font
 mosi = Pin(23, Pin.OUT)
 miso = Pin(34, Pin.IN)
 sck = Pin(18, Pin.OUT)
@@ -18,9 +19,19 @@ h = 250
 x = 0
 y = 0
 
-import framebuf
 buf = bytearray(w * h // 8)
-fb = framebuf.FrameBuffer(buf, w, h, framebuf.MONO_HLSB)
+# fb = framebuf.FrameBuffer(buf, w, h, framebuf.MONO_HLSB)
 black = 0
-white = 1
-fb.fill(white)
+white = 255
+
+for i in range(len(buf)):
+    buf[i] = white
+
+e.set_frame_memory(buf, x, y, w, h)
+e.display_frame()
+
+font.write(buf, 1, "Bonjour".center(17))
+font.write(buf, 3, "tout".center(17))
+font.write(buf, 5, "le monde".center(17))
+e.set_frame_memory(buf, 0, 0, w, h)
+e.display_frame()

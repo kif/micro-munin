@@ -2,6 +2,9 @@
 MicroPython Waveshare 2.13" Black/White GDEH0213B1 e-paper display driver
 https://github.com/mcauser/micropython-waveshare-epaper
 
+Documentation:
+https://www.e-paper-display.com/GDEH0213B73%20V2.0%20Specification1fe5.pdf?method=picker&flag=all&id=e7b42f1d-63b0-4682-b428-6bf562d52245&fileId=809&v=1.zip
+
 MIT License
 Copyright (c) 2017 Waveshare
 Copyright (c) 2018 Mike Causer
@@ -36,30 +39,33 @@ EPD_HEIGHT = const(250)
 
 # Display commands
 DRIVER_OUTPUT_CONTROL = const(0x01)
-# Gate Driving Voltage Control       0x03
+# GATE_DRIVING_VOLTAGE_CONTROL = const(0x03)
 # Source Driving voltage Control     0x04
 BOOSTER_SOFT_START_CONTROL = const(0x0C)  # not in datasheet
 # GATE_SCAN_START_POSITION             = const(0x0F) # not in datasheet
 DEEP_SLEEP_MODE = const(0x10)
 DATA_ENTRY_MODE_SETTING = const(0x11)
-# SW_RESET                             = const(0x12)
+SW_RESET = const(0x12)
+# TemperatureSensorControl 0x18
 # TEMPERATURE_SENSOR_CONTROL           = const(0x1A)
+
 MASTER_ACTIVATION = const(0x20)
-# DISPLAY_UPDATE_CONTROL_1             = const(0x21)
+DISPLAY_UPDATE_CONTROL_1 = const(0x21)
 DISPLAY_UPDATE_CONTROL_2 = const(0x22)
 # Panel Break Detection              0x23
 WRITE_RAM = const(0x24)
 WRITE_VCOM_REGISTER = const(0x2C)
 # Status Bit Read                    0x2F
+LOAD_WS_OTP = const(0x31)
 WRITE_LUT_REGISTER = const(0x32)
 SET_DUMMY_LINE_PERIOD = const(0x3A)
 SET_GATE_TIME = const(0x3B)
-# BORDER_WAVEFORM_CONTROL              = const(0x3C)
+BORDER_WAVEFORM_CONTROL = const(0x3C)
 SET_RAM_X_ADDRESS_START_END_POSITION = const(0x44)
 SET_RAM_Y_ADDRESS_START_END_POSITION = const(0x45)
 SET_RAM_X_ADDRESS_COUNTER = const(0x4E)
 SET_RAM_Y_ADDRESS_COUNTER = const(0x4F)
-TERMINATE_FRAME_READ_WRITE = const(0xFF)  # not in datasheet, aka NOOP
+TERMINATE_FRAME_READ_WRITE = const(0x7F)  # not in datasheet, aka NOOP
 
 BUSY = const(1)  # 1=busy, 0=idle
 
@@ -100,7 +106,8 @@ class EPD:
         self.cs(1)
 
     def init(self):
-        self.reset()
+        self.reset_hw()
+        self.reset_sw()
         self._command(DRIVER_OUTPUT_CONTROL)
         self._data(bytearray([(EPD_HEIGHT - 1) & 0xFF]))
         self._data(bytearray([((EPD_HEIGHT - 1) >> 8) & 0xFF]))
@@ -110,20 +117,32 @@ class EPD:
         self._command(SET_DUMMY_LINE_PERIOD, b'\x1A')  # 4 dummy lines per gate
         self._command(SET_GATE_TIME, b'\x08')  # 2us per line
         self._command(DATA_ENTRY_MODE_SETTING, b'\x03')  # X increment Y increment
+        self.set_memory_area(0, 0, self.width - 1, self.height - 1)
+        # set panel border by command 0x3c
+        # self._command(BORDER_WAVEFORM_CONTROL, ??)
+        # 4. load waveform LUT:
         self.set_lut(self.LUT_FULL_UPDATE)
 
     def wait_until_idle(self):
         while self.busy.value() == BUSY:
             sleep_ms(100)
 
-    def reset(self):
+    def reset_hw(self):
         self.rst(0)
         sleep_ms(200)
         self.rst(1)
         sleep_ms(200)
 
-    def set_lut(self, lut):
-        self._command(WRITE_LUT_REGISTER, lut)
+    def reset_sw(self):
+        self._command(SW_RESET)
+        sleep_ms(10)
+
+    def set_lut(self, lut=None):
+        if lut is None:
+            self._command(LOAD_WS_OTP)
+        else:
+            self._command(WRITE_LUT_REGISTER, lut)
+        self.wait_until_idle()
 
     # put an image in the frame memory
     def set_frame_memory(self, image, x, y, w, h):
