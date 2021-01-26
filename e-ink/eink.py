@@ -1,3 +1,6 @@
+# E-ink display: GDEH0213B73 v2.0
+# Controler: SSD1675B
+
 import epaper2in13
 from machine import Pin, SPI
 # import framebuf
@@ -10,7 +13,7 @@ rst = Pin(16, Pin.OUT)
 busy = Pin(4, Pin.IN)
 dc = Pin(17, Pin.OUT)
 
-spi = SPI(2, baudrate=4000000, polarity=0, phase=0, sck=sck, miso=miso, mosi=mosi)
+spi = SPI(2, baudrate=20000000, polarity=0, phase=0, sck=sck, miso=miso, mosi=mosi)
 e = epaper2in13.EPD(spi, cs, dc, rst, busy)
 e.init()
 
