@@ -1,86 +1,76 @@
-import dht
+# import dht
 import machine
 import esp32
 import network
 from _secret import pin, name, essid
 import socket
 import select
-import time
+import sht21
+
 b_essid = essid.encode()
 station = network.WLAN(network.STA_IF)
 
 
 class Node:
     error = b'# Unknown service\n.\n'
-    expose = {b"meteo_temperature": b"graph_title DHT22 temperature\n"
+    expose = {b"meteo_temperature": b"graph_title SHT21 temperature\n"
                                     b'graph_vlabel degrees Celsius\n'
                                     b'graph_category sensors\n'
-                                    b'graph_info This graph shows the temperature sensor of DHT22\n'
-                                    b'dht22.info Temperature\n'
-                                    b'dht22.min 0\n'
-                                    b'dht22.max 70\n'
-                                    b'dht22.label Temperature inside\n'
+                                    b'graph_info This graph shows the temperature sensor of SHT21\n'
+                                    b'sht21.info Temperature\n'
+                                    b'sht21.min 0\n'
+                                    b'sht21.max 70\n'
+                                    b'sht21.label Temperature inside\n'
                                     b'esp32.info Temperature\n'
                                     b'esp32.min 0\n'
                                     b'esp32.max 70\n'
-                                    b'esp32.label Temperature of the chip\n'
+                                    b'esp32.label Temperature of the LX6 chip\n'
                                     b'.\n',
               b"magnetic": b"graph_title Hall effect sensor\n"
-                                    b'graph_vlabel Magnetic field\n'
-                                    b'graph_category sensors\n'
-                                    b'graph_info This graph shows the magnetic field on the ESP32\n'
-                                    b'esp32.info Magnetic\n'
-                                    b'esp32.min -1024\n'
-                                    b'esp32.max 1024\n'
-                                    b'esp32.label Magnetic field\n'
-                                    b'.\n',
-              b"meteo_humidity": b'graph_title DHT22 humidity sensor\n'
-                                   b'graph_vlabel % Relative humidity\n'
-                                   b'graph_category sensors\n'
-                                   b'graph_info This graph shows the relative humidity sensor of the DHT22\n'
-                                   b'dht22.info Relative humidity\n'
-                                   b'dht22.min 0\n'
-                                   b'dht22.max 100\n'
-                                   b'dht22.label Humidity inside\n'
-                                   b'.\n',
-              b"cpuspeed": b'graph_title CPU frequency scaling\n'
-                            b'graph_args --base 1000\n'
-                            b'graph_category system\n'
-                            b'graph_vlabel Hz\n'
-                            b'graph_info This graph shows the average running speed of each CPU.\n'
-                            b'cpu0.cdef cpu0,1000,*\n'
-                            b'cpu0.label CPU 0\n'
-                            b'cpu0.max 300000000\n'
-                            b'cpu0.min 80000000\n'
-                            b'cpu0.type DERIVE\n'
-                            b'.\n',
+                           b'graph_vlabel Magnetic field\n'
+                           b'graph_category sensors\n'
+                           b'graph_info This graph shows the magnetic field on the ESP32\n'
+                           b'esp32.info Magnetic\n'
+                           b'esp32.min -1024\n'
+                           b'esp32.max 1024\n'
+                           b'esp32.label Magnetic field\n'
+                           b'.\n',
+              b"meteo_humidity": b'graph_title SHT21 humidity sensor\n'
+                                 b'graph_vlabel % Relative humidity\n'
+                                 b'graph_category sensors\n'
+                                 b'graph_info This graph shows the relative humidity sensor of the SHT21\n'
+                                 b'sht21.info Relative humidity\n'
+                                 b'sht21.min 0\n'
+                                 b'sht21.max 100\n'
+                                 b'sht21.label Humidity inside\n'
+                                 b'.\n',
+              b"cpuspeed": b'graph_title CPU frequency (MHz)\n'
+                           b'graph_category system\n'
+                           b'graph_vlabel MHz\n'
+                           b'graph_info This graph shows the average running speed of each CPU\n'
+                           b'cpu.info Frequency (MHz)\n'
+                           b'cpu.max 300\n'
+                           b'cpu.min 0\n'
+                           b'cpu.label CPU\n'
+                           b'.\n',
               b"wifi": b"graph_title Strength of the wifi signal\n"
                        b'graph_vlabel Wifi signal\n'
                        b'graph_category network\n'
                        b'graph_info This graph shows the strength of the WiFi signal\n'
                        b'wifi.info Wifi\n'
-                       b'wifi.min -1024\n'
-                       b'wifi.max 1024\n'
+                       b'wifi.min 0\n'
+                       b'wifi.max 100\n'
                        b'wifi.label Signal strength\n'
                        b'.\n',
               }
 
-    def __init__(self, port=4949, name=name, pin=pin):
-        self.last_read = 0  # utime.ticks_ms()
-        self.dht = dht.DHT22(machine.Pin(pin))
+    def __init__(self, port=4949, name=name, i2c=None):
+        self.i2c = i2c
         self.name = name
         self.addr = socket.getaddrinfo('0.0.0.0', port)[0][-1]
         print("Munin node %s bound to %s" % (self.name, self.addr))
         self.server_socket = None
         self.clients = []
-
-    def _read(self):
-        now = time.ticks_ms()
-        # TODO: check the dtype of time.ticks_ms()
-        if abs(time.ticks_diff(now, self.last_read)) > 2048:
-            self.dht.measure()
-            self.last_read = now
-        return self.dht
 
     def get_list(self):
         return b" ".join(list(self.expose.keys()))
@@ -91,20 +81,16 @@ class Node:
     def fetch(self, what):
         if what == b"meteo_temperature":
             tesp = (esp32.raw_temperature() - 32) * 5 / 9
-            tdht = self._read().temperature()
-            return b'esp32.value %.2f\ndht22.value %.2f\n.\n' % (tesp, tdht)
+            tdht = sht21.SHT21_TEMPERATURE(self.i2c)
+            return b'esp32.value %.2f\nsht21.value %.2f\n.\n' % (tesp, tdht)
         elif what == b"meteo_humidity":
-            return b'dht22.value %.2f\n.\n' % self._read().humidity()
+            return b'sht21.value %.2f\n.\n' % sht21.SHT21_HUMIDITE(self.i2c)
         elif what == b'cpuspeed':
-            return b'cpu0.value %d\n.\n' % machine.freq()
+            return b'cpu.value %d\n.\n' % (machine.freq() // 1000000)
         elif what == b'magnetic':
             return b'esp32.value %d\n.\n' % esp32.hall_sensor()
         elif what == b'wifi':
-            lst = [ i[3] for i in station.scan() if i[0] == b_essid]
-            if lst:
-                return b'wifi.value %d\n.\n' % lst[0]
-            else:
-                return b'wifi.value 0\n.\n'
+            return b'wifi.value %d\n.\n' % (station.status("rssi") + 100)
         else:
             return self.error
 

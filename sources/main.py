@@ -1,7 +1,10 @@
 import wifi
+from machine import I2C, Pin
 import munin
 wifi.connect()
-n = munin.Node();
+
+i2c = I2C(0, scl=Pin(22), sda=Pin(21));
+n = munin.Node(i2c=i2c);
 
 # Slow down the processor, full speed is not really needed.
 import machine
