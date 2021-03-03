@@ -1,10 +1,17 @@
 # E-ink display: GDEH0213B73 v2.0
 # Controler: SSD1675B
-
+import uasyncio as asyncio
 import epaper2in13
-from machine import Pin, SPI
-# import framebuf
-import font
+from machine import Pin, SPI, I2C, UART
+import time
+from htu21d import HTU21D
+from sds import SDS
+
+print("Initialize HTU")
+i2c = I2C(0, scl=Pin(22), sda=Pin(21))
+htu = HTU21D(i2c)
+
+print("Initialize eink")
 mosi = Pin(23, Pin.OUT)
 miso = Pin(34, Pin.IN)
 sck = Pin(18, Pin.OUT)
@@ -17,24 +24,28 @@ spi = SPI(2, baudrate=20000000, polarity=0, phase=0, sck=sck, miso=miso, mosi=mo
 e = epaper2in13.EPD(spi, cs, dc, rst, busy)
 e.init()
 
-w = 128
-h = 250
-x = 0
-y = 0
+e.print("Sensor-S", align="center", update=False)
+# e.display_frame()
 
-buf = bytearray(w * h // 8)
-# fb = framebuf.FrameBuffer(buf, w, h, framebuf.MONO_HLSB)
-black = 0
-white = 255
+uart_sds = UART(2, tx=12, rx=27)
+uart_sds.init(9600, 8, None)
+sreader_sds = asyncio.StreamReader(uart_sds)  # Create a StreamReader
+sds = SDS(sreader_sds)  # Instantiate SDS
 
-for i in range(len(buf)):
-    buf[i] = white
 
-e.set_frame_memory(buf, x, y, w, h)
-e.display_frame()
+async def main():
+    await htu
+    await sds
+    fstr_htu = 'T:{:4.1f}C RH:{:4.1f}%'
+    fstr_sds = 'PM2.5{:4.1f} PM10{:4.1f}'
+    while True:
+        print(fstr_htu.format(htu.temperature, htu.humidity) + " " + fstr_sds.format(*sds.last_value))
+        e.print("Temp: {:5.2f} deg C".format(htu.temperature), where=1, update=False)
+        e.print("Hum : {:5.2f} % rel".format(htu.humidity), where=2, update=False)
+        e.print("PM2.5 {:5.1f} ug/m3".format(sds.last_value.PM2_5), where=3, update=False)
+        e.print("PM10: {:5.1f} ug/m3".format(sds.last_value.PM10), where=4, update=True)
+        await asyncio.sleep(10)
 
-font.write(buf, 1, "Bonjour".center(17))
-font.write(buf, 3, "tout".center(17))
-font.write(buf, 5, "le monde".center(17))
-e.set_frame_memory(buf, 0, 0, w, h)
-e.display_frame()
+
+print("Start loop")
+asyncio.run(main())

@@ -29,6 +29,8 @@ SOFTWARE.
 """
 
 from micropython import const
+import framebuf
+import font
 from time import sleep_ms
 import ustruct
 
@@ -69,8 +71,11 @@ TERMINATE_FRAME_READ_WRITE = const(0x7F)  # not in datasheet, aka NOOP
 
 BUSY = const(1)  # 1=busy, 0=idle
 
+WHITE = const(255)
+BLACK = const(0)
 
-class EPD:
+
+class EPD(framebuf.FrameBuffer):
 
     def __init__(self, spi, cs, dc, rst, busy):
         self.spi = spi
@@ -84,6 +89,11 @@ class EPD:
         self.busy.init(self.busy.IN)
         self.width = EPD_WIDTH
         self.height = EPD_HEIGHT
+        self.buffer = bytearray((EPD_WIDTH // 8) * EPD_HEIGHT)
+        self.last_line = -1
+        super().__init__(self.buffer, EPD_WIDTH, EPD_HEIGHT, framebuf.MONO_HLSB)
+        self.fill(WHITE)
+        self.init()
 
 #    LUT_FULL_UPDATE    = bytearray(b'\x22\x55\xAA\x55\xAA\x55\xAA\x11\x00\x00\x00\x00\x00\x00\x00\x00\x1E\x1E\x1E\x1E\x1E\x1E\x1E\x1E\x01\x00\x00\x00\x00\x00')
 #    LUT_PARTIAL_UPDATE = bytearray(b'\x18\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0F\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
@@ -121,7 +131,14 @@ class EPD:
         # set panel border by command 0x3c
         # self._command(BORDER_WAVEFORM_CONTROL, ??)
         # 4. load waveform LUT:
+        self.refresh()
+        # set_lut(self.LUT_FULL_UPDATE)
+
+    def refresh(self):
+        self.wait_until_idle()
         self.set_lut(self.LUT_FULL_UPDATE)
+        self.display_frame()
+        self.set_lut(self.LUT_PARTIAL_UPDATE)
 
     def wait_until_idle(self):
         while self.busy.value() == BUSY:
@@ -200,3 +217,13 @@ class EPD:
     def sleep(self):
         self._command(DEEP_SLEEP_MODE)
         self.wait_until_idle()
+
+    def print(self, txt, where=None, align="left", update=True):
+        "print the given text, at given line"
+        if where is None:
+            where = (self.last_line + 1) % 5
+        font.write(self.buffer, where, txt, align)
+        self.last_line = where
+        self.set_frame_memory(self.buffer, 0, 0, self.width, self.height)
+        if update:
+            self.display_frame()
