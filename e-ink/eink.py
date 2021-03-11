@@ -36,15 +36,15 @@ sds = SDS(sreader_sds)  # Instantiate SDS
 async def main():
     await htu
     await sds
-    fstr_htu = 'T:{:4.1f}C RH:{:4.1f}%'
-    fstr_sds = 'PM2.5{:4.1f} PM10{:4.1f}'
+#     fstr_htu = 'T:{:4.1f}C RH:{:4.1f}%'
+#     fstr_sds = 'PM2.5{:4.1f} PM10{:4.1f}'
     while True:
-        print(fstr_htu.format(htu.temperature, htu.humidity) + " " + fstr_sds.format(*sds.last_value))
+#         print(fstr_htu.format(htu.temperature, htu.humidity) + " " + fstr_sds.format(*sds.last_value))
         e.print("Temp: {:5.2f} deg C".format(htu.temperature), where=1, update=False)
         e.print("Hum : {:5.2f} % rel".format(htu.humidity), where=2, update=False)
         e.print("PM2.5 {:5.1f} ug/m3".format(sds.last_value.PM2_5), where=3, update=False)
         e.print("PM10: {:5.1f} ug/m3".format(sds.last_value.PM10), where=4, update=True)
-        await asyncio.sleep(10)
+        await asyncio.sleep(2)
 
 
 print("Start loop")
